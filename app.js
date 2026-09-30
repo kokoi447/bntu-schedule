@@ -1,18 +1,22 @@
 /**
  * Telegram Mini App: Расписание группы 10603325 (БНТУ ЭФ)
+ * Оптимизировано для мгновенного запуска в Telegram WebView
  */
 
 (function () {
   'use strict';
 
-  // Telegram WebApp SDK Hook
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-    if (tg.setHeaderColor) {
-      tg.setHeaderColor('secondary_bg_color');
+  // 1. Инициализация Telegram WebApp сразу без задержек
+  let tg = null;
+  try {
+    tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.setHeaderColor) tg.setHeaderColor('secondary_bg_color');
     }
+  } catch (e) {
+    console.warn('Telegram WebApp init warning:', e);
   }
 
   function haptic(style = 'light') {
@@ -23,12 +27,105 @@
     } catch (e) {}
   }
 
+  // Безопасное хранилище (не падает в режиме инкогнито или заблокированных cookies)
+  function safeGet(key, def) {
+    try { return localStorage.getItem(key) || def; } catch (e) { return def; }
+  }
+  function safeSet(key, val) {
+    try { localStorage.setItem(key, val); } catch (e) {}
+  }
+
+  // 2. Встроенные данные расписания группы 10603325 (мгновенный рендер без ожидания fetch)
+  const EMBEDDED_SCHEDULE = {
+    "group": "10603325",
+    "faculty": "Энергетический факультет",
+    "university": "БНТУ",
+    "course": 2,
+    "term": "Осенний семестр 2026/2027",
+    "semesterStart": "2026-09-01",
+    "semesterEnd": "2026-12-28",
+    "timeSlots": [
+      { "lessonNumber": 1, "start": "08:00", "end": "09:35" },
+      { "lessonNumber": 2, "start": "09:55", "end": "11:30" },
+      { "lessonNumber": 3, "start": "11:40", "end": "13:15" },
+      { "lessonNumber": 4, "start": "13:55", "end": "15:30" }
+    ],
+    "weeks": {
+      "1": {
+        "monday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Лекция", "subject": "Теоретические основы электротехники", "teacher": "ст.пр. Зеленко В.В.", "room": "ауд. 447 к. 1", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Электротехнические материалы", "teacher": "ст.пр. Конохов М.С.", "room": "ауд. 447 к. 1", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Физика", "teacher": "—", "room": "ауд. 415 к. 11", "subgroup": "вся группа" }
+        ],
+        "tuesday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Практика", "subject": "Английский язык", "teacher": "пр. Романова П.В.", "room": "ауд. 406а к. 18", "subgroup": "вся группа" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Метрология, стандартизация и оценка соответствия", "teacher": "доц. Савкова Е.Н.", "room": "ауд. 339 к. 1", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Электротехнические материалы", "teacher": "пр. Титович А.М.", "room": "ауд. 1 к. 2", "subgroup": "1 подгруппа" }
+        ],
+        "wednesday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Физкультура", "subject": "Физическая культура", "teacher": "ст.пр. Шкробов Д.В., ст.пр. Седнева А.В., ст.пр. Пильневич А.А.", "room": "спорткомплекс", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Физика", "teacher": "ст.пр. Степанов М.А.", "room": "ауд. 306 к. 11", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лекция", "subject": "Математика", "teacher": "пр. Бричикова А.П.", "room": "ауд. 306 к. 11", "subgroup": "общий поток" }
+        ],
+        "thursday": [
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Практика", "subject": "Математика", "teacher": "пр. Бричикова А.П.", "room": "ауд. 436 к. 1", "subgroup": "вся группа" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Метрология", "teacher": "пр. Бруй А.И.", "room": "ауд. 406 к. 21", "subgroup": "1 подгруппа" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Конструкционные материалы", "teacher": "пр. Мамонов А.М.", "room": "ауд. 11 к. 7", "subgroup": "2 подгруппа" },
+          { "lessonNumber": 4, "time": "13:55 – 15:30", "type": "Лекция", "subject": "Прикладная механика", "teacher": "пр. Долгий С.А.", "room": "ауд. 467 к. 1", "subgroup": "общий поток" }
+        ],
+        "friday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Практика", "subject": "Математика", "teacher": "пр. Бричикова А.П.", "room": "ауд. 338 к. 1", "subgroup": "вся группа" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Практика", "subject": "Прикладная механика", "teacher": "пр. Долгий С.А.", "room": "ауд. 457 к. 1", "subgroup": "вся группа" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Теоретические основы электротехники", "teacher": "ст.пр. Зеленко В.В., ст.пр. Ринговский И.А.", "room": "ауд. 208 к. 2", "subgroup": "вся группа" }
+        ],
+        "saturday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Физкультура", "subject": "Физическая культура", "teacher": "ст.пр. Шкробов Д.В., ст.пр. Седнева А.В., ст.пр. Пильневич А.А.", "room": "спорткомплекс", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Конструкционные материалы", "teacher": "пр. Мамонов А.М.", "room": "ауд. 208 к. 6", "subgroup": "общий поток" }
+        ]
+      },
+      "2": {
+        "monday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Лекция", "subject": "Теоретические основы электротехники", "teacher": "ст.пр. Зеленко В.В.", "room": "ауд. 447 к. 1", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Электротехнические материалы", "teacher": "ст.пр. Конохов М.С.", "room": "ауд. 447 к. 1", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Физика", "teacher": "—", "room": "ауд. 415 к. 11", "subgroup": "вся группа" }
+        ],
+        "tuesday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Практика", "subject": "Английский язык", "teacher": "пр. Романова П.В.", "room": "ауд. 406а к. 18", "subgroup": "вся группа" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Метрология, стандартизация и оценка соответствия", "teacher": "доц. Савкова Е.Н.", "room": "ауд. 339 к. 1", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Электротехнические материалы", "teacher": "пр. Титович А.М.", "room": "ауд. 1 к. 2", "subgroup": "1 подгруппа" }
+        ],
+        "wednesday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Физкультура", "subject": "Физическая культура", "teacher": "ст.пр. Шкробов Д.В., ст.пр. Седнева А.В., ст.пр. Пильневич А.А.", "room": "спорткомплекс", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Физика", "teacher": "ст.пр. Степанов М.А.", "room": "ауд. 306 к. 11", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лекция", "subject": "Математика", "teacher": "пр. Бричикова А.П.", "room": "ауд. 306 к. 11", "subgroup": "общий поток" }
+        ],
+        "thursday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "КР", "subject": "Информатика", "teacher": "пр. Богданова-Лазовская Н.А.", "room": "ауд. 606 к. 21", "subgroup": "вся группа" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Практика", "subject": "Математика", "teacher": "пр. Бричикова А.П.", "room": "ауд. 436 к. 1", "subgroup": "вся группа" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Метрология", "teacher": "пр. Бруй А.И.", "room": "ауд. 406 к. 21", "subgroup": "1 подгруппа" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Лабораторная", "subject": "Конструкционные материалы", "teacher": "пр. Мамонов А.М.", "room": "ауд. 11 к. 7", "subgroup": "2 подгруппа" },
+          { "lessonNumber": 4, "time": "13:55 – 15:30", "type": "Лекция", "subject": "Прикладная механика", "teacher": "пр. Долгий С.А.", "room": "ауд. 467 к. 1", "subgroup": "общий поток" }
+        ],
+        "friday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Лекция", "subject": "Математика", "teacher": "пр. Бричикова А.П.", "room": "ауд. 208 к. 6", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Практика", "subject": "Теоретические основы электротехники", "teacher": "ст.пр. Зеленко В.В.", "room": "ауд. 304 к. 21", "subgroup": "вся группа" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Практика", "subject": "Физика", "teacher": "ст.пр. Степанов М.А.", "room": "ауд. 338 к. 1", "subgroup": "вся группа" }
+        ],
+        "saturday": [
+          { "lessonNumber": 1, "time": "08:00 – 09:35", "type": "Физкультура", "subject": "Физическая культура", "teacher": "ст.пр. Шкробов Д.В., ст.пр. Седнева А.В., ст.пр. Пильневич А.А.", "room": "спорткомплекс", "subgroup": "общий поток" },
+          { "lessonNumber": 2, "time": "09:55 – 11:30", "type": "Лекция", "subject": "Конструкционные материалы", "teacher": "пр. Мамонов А.М.", "room": "ауд. 208 к. 6", "subgroup": "общий поток" },
+          { "lessonNumber": 3, "time": "11:40 – 13:15", "type": "Кураторский час", "subject": "Кураторский / информационный час", "teacher": "ст.пр. Болтуть А.Ю.", "room": "ауд. 607 к. 21", "subgroup": "вся группа" }
+        ]
+      }
+    }
+  };
+
   const state = {
-    scheduleData: null,
+    scheduleData: EMBEDDED_SCHEDULE,
     currentAcademicWeek: '1',
     academicWeekNumber: 1,
     selectedWeek: '1',
-    selectedSubgroup: localStorage.getItem('tma_subgroup') || 'all',
+    selectedSubgroup: safeGet('tma_subgroup', 'all'),
     searchQuery: '',
     currentDayKey: null,
     now: new Date()
@@ -125,16 +222,18 @@
     state.now = new Date();
     const hours = String(state.now.getHours()).padStart(2, '0');
     const minutes = String(state.now.getMinutes()).padStart(2, '0');
-    DOM.clockDisplay.textContent = `${hours}:${minutes}`;
+    if (DOM.clockDisplay) DOM.clockDisplay.textContent = `${hours}:${minutes}`;
 
     const weekInfo = calculateAcademicWeek(state.now);
     state.academicWeekNumber = weekInfo.academicWeekNumber;
     state.currentAcademicWeek = weekInfo.parity;
     state.currentDayKey = DAY_KEYS[state.now.getDay()];
 
-    DOM.academicWeekText.innerHTML = `Учебная неделя <strong>${state.academicWeekNumber}</strong> (${state.currentAcademicWeek}-я неделя)`;
+    if (DOM.academicWeekText) {
+      DOM.academicWeekText.innerHTML = `Учебная неделя <strong>${state.academicWeekNumber}</strong> (${state.currentAcademicWeek}-я неделя)`;
+    }
 
-    if (state.scheduleData?.weeks) {
+    if (DOM.currentLessonStatus && state.scheduleData?.weeks) {
       const todayLessons = (state.scheduleData.weeks[state.currentAcademicWeek] || {})[state.currentDayKey] || [];
       const currentMinutes = state.now.getHours() * 60 + state.now.getMinutes();
 
@@ -167,7 +266,7 @@
   }
 
   function renderSchedule() {
-    if (!state.scheduleData?.weeks) return;
+    if (!state.scheduleData?.weeks || !DOM.daysContainer) return;
     const weekData = state.scheduleData.weeks[state.selectedWeek] || {};
     const weekOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const isCurrentWeek = state.selectedWeek === state.currentAcademicWeek;
@@ -249,31 +348,37 @@
       DOM.daysContainer.appendChild(card);
     });
 
+    if (DOM.stateLoader) DOM.stateLoader.hidden = true;
+
     if (totalLessons === 0 && (state.searchQuery || state.selectedSubgroup !== 'all')) {
       DOM.daysContainer.hidden = true;
-      DOM.emptyResults.hidden = false;
+      if (DOM.emptyResults) DOM.emptyResults.hidden = false;
     } else {
       DOM.daysContainer.hidden = false;
-      DOM.emptyResults.hidden = true;
+      if (DOM.emptyResults) DOM.emptyResults.hidden = true;
     }
 
     // Update nav pills
-    const pills = DOM.daysNavPills.querySelectorAll('.nav-pill');
-    pills.forEach(p => {
-      const d = p.getAttribute('data-day');
-      p.classList.toggle('active-pill', isCurrentWeek && d === state.currentDayKey);
-    });
+    if (DOM.daysNavPills) {
+      const pills = DOM.daysNavPills.querySelectorAll('.nav-pill');
+      pills.forEach(p => {
+        const d = p.getAttribute('data-day');
+        p.classList.toggle('active-pill', isCurrentWeek && d === state.currentDayKey);
+      });
+    }
 
-    DOM.fabToday.hidden = !(isCurrentWeek && state.currentDayKey !== 'sunday');
+    if (DOM.fabToday) {
+      DOM.fabToday.hidden = !(isCurrentWeek && state.currentDayKey !== 'sunday');
+    }
   }
 
   function syncControls() {
-    DOM.btnWeek1.classList.toggle('active', state.selectedWeek === '1');
-    DOM.btnWeek2.classList.toggle('active', state.selectedWeek === '2');
+    if (DOM.btnWeek1) DOM.btnWeek1.classList.toggle('active', state.selectedWeek === '1');
+    if (DOM.btnWeek2) DOM.btnWeek2.classList.toggle('active', state.selectedWeek === '2');
 
-    DOM.btnSubAll.classList.toggle('active', state.selectedSubgroup === 'all');
-    DOM.btnSub1.classList.toggle('active', state.selectedSubgroup === '1');
-    DOM.btnSub2.classList.toggle('active', state.selectedSubgroup === '2');
+    if (DOM.btnSubAll) DOM.btnSubAll.classList.toggle('active', state.selectedSubgroup === 'all');
+    if (DOM.btnSub1) DOM.btnSub1.classList.toggle('active', state.selectedSubgroup === '1');
+    if (DOM.btnSub2) DOM.btnSub2.classList.toggle('active', state.selectedSubgroup === '2');
   }
 
   function scrollToDay(dayKey) {
@@ -282,119 +387,148 @@
   }
 
   function setupEvents() {
-    DOM.btnWeek1.addEventListener('click', () => {
-      haptic('light');
-      state.selectedWeek = '1';
-      syncControls();
-      renderSchedule();
-    });
+    if (DOM.btnWeek1) {
+      DOM.btnWeek1.addEventListener('click', () => {
+        haptic('light');
+        state.selectedWeek = '1';
+        syncControls();
+        renderSchedule();
+      });
+    }
 
-    DOM.btnWeek2.addEventListener('click', () => {
-      haptic('light');
-      state.selectedWeek = '2';
-      syncControls();
-      renderSchedule();
-    });
+    if (DOM.btnWeek2) {
+      DOM.btnWeek2.addEventListener('click', () => {
+        haptic('light');
+        state.selectedWeek = '2';
+        syncControls();
+        renderSchedule();
+      });
+    }
 
-    DOM.btnCurrentWeekShortcut.addEventListener('click', () => {
-      haptic('medium');
-      state.selectedWeek = state.currentAcademicWeek;
-      syncControls();
-      renderSchedule();
-      if (state.currentDayKey && state.currentDayKey !== 'sunday') {
-        setTimeout(() => scrollToDay(state.currentDayKey), 80);
-      }
-    });
+    if (DOM.btnCurrentWeekShortcut) {
+      DOM.btnCurrentWeekShortcut.addEventListener('click', () => {
+        haptic('medium');
+        state.selectedWeek = state.currentAcademicWeek;
+        syncControls();
+        renderSchedule();
+        if (state.currentDayKey && state.currentDayKey !== 'sunday') {
+          setTimeout(() => scrollToDay(state.currentDayKey), 80);
+        }
+      });
+    }
 
     const setSubgroup = (val) => {
       haptic('light');
       state.selectedSubgroup = val;
-      localStorage.setItem('tma_subgroup', val);
+      safeSet('tma_subgroup', val);
       syncControls();
       renderSchedule();
     };
 
-    DOM.btnSubAll.addEventListener('click', () => setSubgroup('all'));
-    DOM.btnSub1.addEventListener('click', () => setSubgroup('1'));
-    DOM.btnSub2.addEventListener('click', () => setSubgroup('2'));
+    if (DOM.btnSubAll) DOM.btnSubAll.addEventListener('click', () => setSubgroup('all'));
+    if (DOM.btnSub1) DOM.btnSub1.addEventListener('click', () => setSubgroup('1'));
+    if (DOM.btnSub2) DOM.btnSub2.addEventListener('click', () => setSubgroup('2'));
 
-    DOM.tmaSearchInput.addEventListener('input', (e) => {
-      state.searchQuery = e.target.value.trim();
-      DOM.tmaClearSearch.hidden = !state.searchQuery;
-      renderSchedule();
-    });
+    if (DOM.tmaSearchInput) {
+      DOM.tmaSearchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value.trim();
+        if (DOM.tmaClearSearch) DOM.tmaClearSearch.hidden = !state.searchQuery;
+        renderSchedule();
+      });
+    }
 
-    DOM.tmaClearSearch.addEventListener('click', () => {
-      haptic('light');
-      DOM.tmaSearchInput.value = '';
-      state.searchQuery = '';
-      DOM.tmaClearSearch.hidden = true;
-      renderSchedule();
-    });
+    if (DOM.tmaClearSearch) {
+      DOM.tmaClearSearch.addEventListener('click', () => {
+        haptic('light');
+        if (DOM.tmaSearchInput) DOM.tmaSearchInput.value = '';
+        state.searchQuery = '';
+        DOM.tmaClearSearch.hidden = true;
+        renderSchedule();
+      });
+    }
 
-    DOM.btnResetFilters.addEventListener('click', () => {
-      haptic('light');
-      state.searchQuery = '';
-      state.selectedSubgroup = 'all';
-      DOM.tmaSearchInput.value = '';
-      DOM.tmaClearSearch.hidden = true;
-      localStorage.setItem('tma_subgroup', 'all');
-      syncControls();
-      renderSchedule();
-    });
-
-    DOM.daysNavPills.addEventListener('click', (e) => {
-      const pill = e.target.closest('.nav-pill');
-      if (pill) {
-        haptic('selection');
-        const day = pill.getAttribute('data-day');
-        scrollToDay(day);
-      }
-    });
-
-    DOM.fabToday.addEventListener('click', () => {
-      haptic('medium');
-      if (state.selectedWeek !== state.currentAcademicWeek) {
-        state.selectedWeek = state.currentAcademicWeek;
+    if (DOM.btnResetFilters) {
+      DOM.btnResetFilters.addEventListener('click', () => {
+        haptic('light');
+        state.searchQuery = '';
+        state.selectedSubgroup = 'all';
+        if (DOM.tmaSearchInput) DOM.tmaSearchInput.value = '';
+        if (DOM.tmaClearSearch) DOM.tmaClearSearch.hidden = true;
+        safeSet('tma_subgroup', 'all');
         syncControls();
         renderSchedule();
-      }
-      if (state.currentDayKey && state.currentDayKey !== 'sunday') {
-        scrollToDay(state.currentDayKey);
-      }
-    });
+      });
+    }
+
+    if (DOM.daysNavPills) {
+      DOM.daysNavPills.addEventListener('click', (e) => {
+        const pill = e.target.closest('.nav-pill');
+        if (pill) {
+          haptic('selection');
+          const day = pill.getAttribute('data-day');
+          scrollToDay(day);
+        }
+      });
+    }
+
+    if (DOM.fabToday) {
+      DOM.fabToday.addEventListener('click', () => {
+        haptic('medium');
+        if (state.selectedWeek !== state.currentAcademicWeek) {
+          state.selectedWeek = state.currentAcademicWeek;
+          syncControls();
+          renderSchedule();
+        }
+        if (state.currentDayKey && state.currentDayKey !== 'sunday') {
+          scrollToDay(state.currentDayKey);
+        }
+      });
+    }
   }
 
-  async function loadData() {
+  // Опциональное обновление расписания из сети (в фоне, не блокируя UI)
+  async function backgroundUpdateData() {
     try {
-      const res = await fetch('data/schedule.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      state.scheduleData = await res.json();
-      DOM.stateLoader.hidden = true;
-
-      updateClock();
-      syncControls();
-      renderSchedule();
-
-      if (state.currentDayKey && state.currentDayKey !== 'sunday') {
-        setTimeout(() => scrollToDay(state.currentDayKey), 120);
+      const scheduleUrl = new URL('data/schedule.json', window.location.href).href;
+      const res = await fetch(scheduleUrl);
+      if (res.ok) {
+        const fresh = await res.json();
+        if (fresh && fresh.weeks) {
+          state.scheduleData = fresh;
+          renderSchedule();
+        }
       }
     } catch (e) {
-      DOM.stateLoader.innerHTML = `<p style="color:#ef4444;">Ошибка загрузки расписания: ${e.message}</p>`;
+      // Игнорируем сетевые ошибки, так как встроенные данные уже работают
     }
   }
 
   function init() {
-    if (tg?.colorScheme) {
-      document.documentElement.setAttribute('data-theme', tg.colorScheme);
-    }
+    try {
+      if (tg?.colorScheme) {
+        document.documentElement.setAttribute('data-theme', tg.colorScheme);
+      }
+    } catch (e) {}
+
     const weekInfo = calculateAcademicWeek();
     state.academicWeekNumber = weekInfo.academicWeekNumber;
     state.currentAcademicWeek = weekInfo.parity;
     state.selectedWeek = weekInfo.parity;
 
     setupEvents();
-    loadData();
+    syncControls();
+    updateClock();
+    
+    // Мгновенный первый рендер из памяти (0 мс)
+    renderSchedule();
+
+    // Автопрокрутка к сегодняшнему дню
+    if (state.currentDayKey && state.currentDayKey !== 'sunday') {
+      setTimeout(() => scrollToDay(state.currentDayKey), 100);
+    }
+
+    // Фоновая проверка актуальности данных и тиканье часов
+    backgroundUpdateData();
     setInterval(updateClock, 1000);
   }
 
