@@ -6,18 +6,17 @@
 (function () {
   'use strict';
 
-  // 1. Инициализация Telegram WebApp сразу без задержек
+  // 1. Инициализация Telegram WebApp сразу без задержек (полная совместимость с macOS Telegram)
   let tg = null;
   try {
     tg = window.Telegram?.WebApp;
     if (tg) {
-      tg.ready();
-      tg.expand();
-      if (tg.setHeaderColor) tg.setHeaderColor('secondary_bg_color');
+      try { tg.ready(); } catch (e) {}
+      try { tg.expand(); } catch (e) {}
+      try { if (typeof tg.setHeaderColor === 'function') tg.setHeaderColor('secondary_bg_color'); } catch (e) {}
     }
-  } catch (e) {
-    console.warn('Telegram WebApp init warning:', e);
-  }
+  } catch (e) {}
+
 
   function haptic(style = 'light') {
     try {
