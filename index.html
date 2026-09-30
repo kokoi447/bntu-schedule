@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>БНТУ 10603325 | Расписание</title>
+  
+  <!-- Telegram WebApp JS SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="tma-app">
+    <!-- Header -->
+    <header class="tma-header">
+      <div class="header-top-row">
+        <div class="brand-info">
+          <span class="brand-tag">БНТУ • ЭФ • 2 курс</span>
+          <h1 class="brand-heading">Группа 10603325</h1>
+        </div>
+        <div class="header-clock" id="clockDisplay" title="Системное время">--:--</div>
+      </div>
+
+      <!-- Live status chip -->
+      <div class="tma-status-bar">
+        <div class="status-indicator">
+          <span class="live-dot"></span>
+          <span id="academicWeekText">Определение недели...</span>
+        </div>
+        <div class="current-lesson-indicator" id="currentLessonStatus">
+          <span>Загрузка пар...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls Toolbar -->
+    <section class="tma-toolbar">
+      <!-- Week Selector -->
+      <div class="toolbar-row">
+        <div class="tma-segmented" id="weekSegments" role="radiogroup">
+          <button type="button" class="segment-btn active" data-week="1" id="btnWeek1">1-я неделя</button>
+          <button type="button" class="segment-btn" data-week="2" id="btnWeek2">2-я неделя</button>
+        </div>
+        <button type="button" class="btn-today-pill" id="btnCurrentWeekShortcut">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span>Текущая</span>
+        </button>
+      </div>
+
+      <!-- Subgroup Selector -->
+      <div class="toolbar-row">
+        <div class="tma-segmented full-width" id="subgroupSegments" role="radiogroup">
+          <button type="button" class="segment-btn active" data-subgroup="all" id="btnSubAll">Все</button>
+          <button type="button" class="segment-btn" data-subgroup="1" id="btnSub1">1 подгруппа</button>
+          <button type="button" class="segment-btn" data-subgroup="2" id="btnSub2">2 подгруппа</button>
+        </div>
+      </div>
+
+      <!-- Instant Search -->
+      <div class="toolbar-row">
+        <div class="search-box">
+          <svg class="search-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" id="tmaSearchInput" placeholder="Поиск предмета, преподавателя..." autocomplete="off">
+          <button type="button" id="tmaClearSearch" class="clear-search" hidden>&times;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Day Pills -->
+    <nav class="days-nav-pills" id="daysNavPills">
+      <button type="button" class="nav-pill" data-day="monday">Пн</button>
+      <button type="button" class="nav-pill" data-day="tuesday">Вт</button>
+      <button type="button" class="nav-pill" data-day="wednesday">Ср</button>
+      <button type="button" class="nav-pill" data-day="thursday">Чт</button>
+      <button type="button" class="nav-pill" data-day="friday">Пт</button>
+      <button type="button" class="nav-pill" data-day="saturday">Сб</button>
+    </nav>
+
+    <!-- Schedule Cards Stream -->
+    <main class="tma-content">
+      <div class="state-loader" id="stateLoader">
+        <div class="loader-spinner"></div>
+        <p>Загрузка расписания...</p>
+      </div>
+
+      <div class="days-container" id="daysContainer" hidden>
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <div class="empty-results" id="emptyResults" hidden>
+        <div class="empty-icon">🔍</div>
+        <h3>Ничего не найдено</h3>
+        <p id="emptyResultsText">Попробуйте изменить поисковый запрос</p>
+        <button type="button" class="btn-action" id="btnResetFilters">Сбросить фильтры</button>
+      </div>
+    </main>
+
+    <!-- Bell Schedule Accordion -->
+    <section class="bells-footer">
+      <div class="bells-title">🔔 Сетка звонков БНТУ</div>
+      <div class="bells-grid">
+        <div class="bell-item"><b>1 пара:</b> 08:00–09:35</div>
+        <div class="bell-item"><b>2 пара:</b> 09:55–11:30</div>
+        <div class="bell-item"><b>3 пара:</b> 11:40–13:15</div>
+        <div class="bell-item"><b>4 пара:</b> 13:55–15:30</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Floating Jump to Today Button -->
+  <button type="button" class="fab-today" id="fabToday" hidden>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
+    <span>Сегодня</span>
+  </button>
+
+  <script src="app.js"></script>
+</body>
+</html>
